@@ -84,7 +84,7 @@ Detailed results and visualizations are available on the [project page](https://
 
 ```bibtex
 @article{gu2025psdcfn,
-  title   = {PSDCFN: Personalized Static-Dynamic Counterfactual Fusion
+  title   = {PSDCFN: A Personalized Static-Dynamic Counterfactual Fusion
              Network for Nutrition-Aware Fasting Blood Glucose Prediction},
   author  = {Gu, Haoyu and Jing, Peiguang and Jiang, Huaiyan and Liu, Yu},
   journal = {Preprint},
