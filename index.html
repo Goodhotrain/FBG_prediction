@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PSDCFN – FBG Prediction</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --card: #ffffff;
+    --text: #2d3436;
+    --muted: #636e72;
+    --accent: #0984e3;
+    --border: #e0e0e0;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.7;
+  }
+  .container { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
+
+  /* Hero */
+  .hero {
+    background: linear-gradient(135deg, #0c0c1d 0%, #1a1a3e 40%, #0d1b2a 100%);
+    color: #fff; padding: 48px 0 40px; text-align: center;
+  }
+  .hero h1 { font-size: 1.35rem; font-weight: 700; line-height: 1.4; margin-bottom: 12px; max-width: 800px; margin-left: auto; margin-right: auto; }
+  .hero .authors { font-size: 1rem; opacity: 0.9; margin-bottom: 4px; }
+  .hero .affiliation { font-size: 0.85rem; opacity: 0.7; }
+  .hero .links { margin-top: 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .hero .links a {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 18px; border-radius: 20px;
+    text-decoration: none; font-size: 0.88rem; font-weight: 600;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .hero .links a:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.25); }
+  .btn-paper { background: #fff; color: #1a1a3e; }
+  .btn-code  { background: #2d3436; color: #fff; }
+
+  /* Section */
+  section { padding: 36px 0; }
+  section h2 {
+    font-size: 1.3rem; font-weight: 700; margin-bottom: 16px;
+    padding-bottom: 6px; border-bottom: 2px solid var(--accent);
+    display: inline-block;
+  }
+  section p { margin-bottom: 10px; color: #444; }
+
+  /* Card */
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 24px; margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+
+  /* Figure */
+  .figure { margin: 16px 0; text-align: center; }
+  .figure img {
+    max-width: 100%; height: auto;
+    border-radius: 8px; border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+  /* Grid */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 16px 0; }
+  @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* Footer */
+  footer {
+    text-align: center; padding: 28px 0; color: var(--muted); font-size: 0.85rem;
+    border-top: 1px solid var(--border); margin-top: 16px;
+  }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="container">
+    <h1>PSDCFN: Personalized Static-Dynamic Counterfactual Fusion Network<br>for Nutrition-Aware Fasting Blood Glucose Prediction</h1>
+    <p class="authors">Haoyu Gu &middot; Peiguang Jing &middot; Huaiyan Jiang &middot; Yu Liu</p>
+    <p class="affiliation">School of Microelectronics, Tianjin University, Tianjin, 300072, China</p>
+    <div class="links">
+      <a class="btn-paper" href="#">Paper</a>
+      <a class="btn-code" href="https://github.com/Goodhotrain/FBG_prediction">GitHub</a>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Motivation -->
+  <section>
+    <h2>Motivation</h2>
+    <div class="card">
+      <p>Accurate FBG prediction requires <strong>joint modeling of static characteristics and dynamic behavioral patterns</strong>. Static characteristics provide baseline health information, while dynamic behavioral patterns capture temporal variations in daily nutrition and activity. Their interaction jointly shapes FBG outcomes over time.</p>
+      <div class="figure">
+        <img src="figures/Motivation.png" alt="Motivation">
+      </div>
+    </div>
+  </section>
+
+  <!-- Network Architecture -->
+  <section>
+    <h2>Network Architecture</h2>
+    <div class="card">
+      <p>PSDCFN features a <strong>dual-stream architecture</strong>: a static stream with counterfactually regularized sparse attention, and a dynamic stream with inter-feature self-attention. A progressive causal fusion module hierarchically injects static information into temporal nutrient representations.</p>
+      <div class="figure">
+        <img src="figures/Network.png" alt="PSDCFN Architecture">
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Results -->
+  <section>
+    <h2>Main Results</h2>
+    <div class="card">
+      <p>Experimental results demonstrate that PSDCFN consistently outperforms existing methods in personalized FBG prediction.</p>
+      <div class="grid-2">
+        <div class="figure">
+          <img src="figures/main_results.png" alt="Main results 1">
+          </div>
+        <div class="figure">
+          <img src="figures/main_results2.png" alt="Main results 2">
+          </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- UMAP Visualization -->
+  <section>
+    <h2>Representation Analysis</h2>
+    <div class="card">
+      <p>UMAP visualizations of learned representations show that PSDCFN produces well-structured embeddings that correlate with FBG values and prediction error.</p>
+      <div class="figure">
+        <img src="figures/UMAP.png" alt="UMAP visualization">
+      </div>
+    </div>
+  </section>
+
+  <!-- Attention Visualization -->
+  <section>
+    <h2>Attention Visualization</h2>
+    <div class="card">
+      <p>Sparse attention weights reveal which physiological features the model focuses on for personalized modulation of nutritional patterns.</p>
+      <div class="figure">
+        <img src="figures/Attention_visualization.png" alt="Attention weights">
+      </div>
+    </div>
+  </section>
+
+  <!-- SHAP Analysis -->
+  <section>
+    <h2>Feature Importance (SHAP)</h2>
+    <div class="card">
+      <p>SHAP analysis identifies the most influential features for FBG prediction, providing interpretable insights into which static and dynamic factors drive the predictions.</p>
+      <div class="figure">
+        <img src="figures/Shap.png" alt="SHAP analysis">
+      </div>
+    </div>
+  </section>
+
+  <!-- Citation -->
+  <section>
+    <h2>Citation</h2>
+    <div class="card">
+      <pre style="background:#f5f6fa;padding:16px;border-radius:8px;overflow-x:auto;font-size:0.83rem;line-height:1.5;">
+@article{gu2025psdcfn,
+  title   = {PSDCFN: A Personalized Static-Dynamic Counterfactual Fusion
+             Network for Nutrition-Aware Fasting Blood Glucose Prediction},
+  author  = {Gu, Haoyu and Jing, Peiguang and Jiang, Huaiyan and Liu, Yu},
+  journal = {Preprint},
+  year    = {2025}
+}</pre>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <div class="container">
+    <p>PSDCFN Project &mdash; School of Microelectronics, Tianjin University</p>
+    <p style="margin-top:4px;"><a href="https://github.com/Goodhotrain/FBG_prediction">GitHub</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
