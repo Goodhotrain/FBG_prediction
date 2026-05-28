@@ -1,4 +1,4 @@
-# PSDCFN: Personalized Static-Dynamic Counterfactual Fusion Network
+# PSDCFN: A Personalized Static-Dynamic Counterfactual Fusion Network
 
 [![Project Page](https://img.shields.io/badge/Project-Page-blue)](https://goodhotrain.github.io/FBG_prediction)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
