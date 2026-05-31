@@ -5,7 +5,7 @@
 
 **Nutrition-Aware Fasting Blood Glucose Prediction via Static-Dynamic Counterfactual Fusion**
 
-*Haoyu Gu, Peiguang Jing, Huaiyan Jiang, Yu Liu — Tianjin University*
+*Haoyu Gu, Huaiyan Jiang, Peiguang Jing, Bo Wei, Yu Liu*
 
 ## Overview
 
@@ -86,7 +86,7 @@ Detailed results and visualizations are available on the [project page](https://
 @article{gu2025psdcfn,
   title   = {PSDCFN: A Personalized Static-Dynamic Counterfactual Fusion
              Network for Nutrition-Aware Fasting Blood Glucose Prediction},
-  author  = {Gu, Haoyu and Jing, Peiguang and Jiang, Huaiyan and Liu, Yu},
+  author  = {Gu, Haoyu and Jiang, Huaiyan and Jing, Peiguang and Wei, Bo and Liu, Yu},
   journal = {Preprint},
   year    = {2025}
 }
