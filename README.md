@@ -80,17 +80,6 @@ PSDCFN consistently outperforms baselines in FBG prediction:
 
 Detailed results and visualizations are available on the [project page](https://goodhotrain.github.io/FBG_prediction).
 
-## Citation
-
-```bibtex
-@article{gu2025psdcfn,
-  title   = {PSDCFN: A Personalized Static-Dynamic Counterfactual Fusion
-             Network for Nutrition-Aware Fasting Blood Glucose Prediction},
-  author  = {Gu, Haoyu and Jiang, Huaiyan and Jing, Peiguang and Wei, Bo and Liu, Yu},
-  journal = {Preprint},
-  year    = {2025}
-}
-```
 
 ## License
 
