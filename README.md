@@ -1,87 +1,103 @@
-# PSDCFN: A Personalized Static-Dynamic Counterfactual Fusion Network
+# PSDCFN: Personalized Static–Dynamic Counterfactual Fusion Network
 
 [![Project Page](https://img.shields.io/badge/Project-Page-blue)](https://goodhotrain.github.io/FBG_prediction)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-ee4c2c)](https://pytorch.org/)
 
-**Nutrition-Aware Fasting Blood Glucose Prediction via Static-Dynamic Counterfactual Fusion**
+An experimental framework for personalized fasting blood glucose (FBG) regression from static clinical attributes, longitudinal nutrition records, and historical FBG measurements.
 
-*Haoyu Gu, Huaiyan Jiang, Peiguang Jing, Bo Wei, Yu Liu*
+## What is implemented
 
-## Overview
+- **Clinical feature tokenization**: each scalar static feature receives a learnable value embedding and participates in self-attention.
+- **Masked temporal modeling**: a Transformer models variable-length dietary histories without attending to padded days.
+- **Progressive cross-modal fusion**: static patient context repeatedly queries the longitudinal stream through gated residual cross-attention.
+- **Adaptive history integration**: a learned gate controls how much historical FBG contributes to each prediction.
+- **Counterfactual consistency**: perturbations of static attributes regularize prediction stability during training.
+- **Reproducible experiments**: deterministic seeding, train-only preprocessing, gradient clipping, early stopping, resumable checkpoints, TensorBoard, and JSONL metrics.
+- **Interpretability outputs**: static-feature attention, temporal attention, and the history gate are available from `ModelOutput`.
 
-PSDCFN is a deep learning framework for personalized fasting blood glucose (FBG) prediction that jointly models heterogeneous health data including physiological profiles, clinical metrics, and daily nutritional intake records. The model features a dual-stream architecture with counterfactually regularized sparse attention, inter-feature self-attention, and progressive causal fusion modulation.
+## Repository layout
 
-![](figures/umap_ablation_2x2.png)
-
-## Key Features
-
-- **Dual-stream architecture** for static physiological profiles and dynamic dietary records
-- **Counterfactually regularized sparse attention** for interpretable physiological representations
-- **Inter-feature self-attention** to capture nutrient dependencies
-- **Progressive causal fusion modulation** for personalized FBG prediction
-
-## Project Structure
-
-```
-├── models/              # Model definitions
-│   ├── model.py         # Main PSDCFN model (FBGPredictor)
-│   ├── model_v.py       # Model variant
-│   ├── argf.py          # Multi-modal fusion modules
-│   ├── mamba/           # State-space model components
-│   └── my_model/        # Custom neural network layers
-├── data/
-│   └── dataset.py       # FBG Dataset loader
-├── common/              # Utilities (config, optimizer, plotting)
-├── main.py              # Training script
-├── valid.py             # Validation / testing script
-├── opt.py               # Argument configuration
-├── train.sh             # Launch training runs
-├── figures/             # Result figures and visualizations
-├── index.html           # Project showcase page
-└── a.ipynb              # Data preprocessing notebook
+```text
+.
+├── common/engine.py       # epochs, regression metrics, checkpoint I/O
+├── common/optimizer.py    # optimizer and scheduler factories
+├── data/dataset.py        # validation, preprocessing, temporal windows
+├── models/model.py        # current PSDCFN implementation
+├── models/                # retained research baselines and ablations
+├── tests/                 # model and data-pipeline tests
+├── main.py                # training entry point
+├── valid.py               # evaluation and prediction export
+└── opt.py                 # documented CLI configuration
 ```
 
-## Setup
+## Installation
 
 ```bash
-# Create environment
-conda create -n fbgs python=3.10
-conda activate fbgs
-
-# Install dependencies
-pip install torch pandas numpy scikit-learn matplotlib shap umap-learn tensorboard
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-## Usage
+## Data contract
 
-### Training
+Private clinical data is not included. Three aligned CSV files are expected:
+
+1. `labels.csv`: the first column is the numeric FBG target and the second is a split (`train` or `test`).
+2. `static.csv`: `UserID`, `Day`, followed by static numeric features.
+3. `nutrition.csv`: `UserID`, `Day`, followed by nutrition features; the **last feature must be historical FBG**.
+
+Static and label files must have the same row order. Nutrition rows may contain repeated users and are sorted by day when the history window is built. Scalers are fit on the training split and reused for validation, preventing validation-statistic leakage.
+
+## Training
 
 ```bash
-python main.py
+python main.py \
+  --label-path data/labels.csv \
+  --static-path data/static.csv \
+  --nutrition-path data/nutrition.csv \
+  --static-dim 32 \
+  --nutrition-dim 78 \
+  --epochs 100 \
+  --optimizer adamw \
+  --scheduler cosine
 ```
 
-Configure paths and hyperparameters in `opt.py`.
+Use `python main.py --help` for all options. Each run writes:
 
-### Data
+```text
+results/<run-name>/
+├── config.json
+├── metrics.jsonl
+├── checkpoints/best.pt
+├── checkpoints/last.pt
+└── tensorboard/
+```
 
-The dataset includes:
-- **Static features** (32 dims): age, gender, BMI, clinical metrics, lifestyle factors
-- **Dynamic features** (79 dims): daily nutritional intake records
-- **Target**: Fasting blood glucose (FBG) level
+Resume a run with `--resume --checkpoint results/.../checkpoints/last.pt`.
 
-> Note: Data files are not included in this repository. Please contact the authors for data access.
+## Evaluation
 
-## Results
+Evaluation architecture arguments must match those used for training:
 
-PSDCFN consistently outperforms baselines in FBG prediction:
+```bash
+python valid.py \
+  --checkpoint results/<run-name>/checkpoints/best.pt \
+  --label-path data/labels.csv \
+  --static-path data/static.csv \
+  --nutrition-path data/nutrition.csv
+```
 
-- **With historical FBG**: Superior MAE and RMSE compared to existing methods
-- **Without historical FBG**: Maintains robust performance using only static + nutrition data
+The command reports MAE, MSE, RMSE, and R², then saves `predictions.csv` alongside the run artifacts.
 
-Detailed results and visualizations are available on the [project page](https://goodhotrain.github.io/FBG_prediction).
+## Testing
 
+Tests use synthetic data; access to the private dataset is not required.
 
-## License
+```bash
+python -m pytest -q
+```
 
-MIT License
+## Citation
 
+If this repository helps your work, please cite the associated PSDCFN paper once its archival record is available.
