@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from logging import getLogger
 
 
+
 class moving_avg(nn.Module):
     """
     Moving average block to highlight the trend of time series
