@@ -1,4 +1,4 @@
-"""Optimizer and learning-rate scheduler factories."""
+"""Build optimizers and learning-rate schedules from experiment settings."""
 
 import torch
 

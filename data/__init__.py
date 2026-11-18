@@ -1,4 +1,4 @@
-"""Dataset and preprocessing package."""
+"""Public dataset, preprocessing, and data loader interfaces."""
 
 from .dataset import FBGDataset, FBGPreprocessor, build_dataloaders
 

@@ -1,3 +1,5 @@
+"""Check that FBG samples contain correctly padded nutrition histories."""
+
 from argparse import Namespace
 import pandas as pd
 from data.dataset import FBGDataset

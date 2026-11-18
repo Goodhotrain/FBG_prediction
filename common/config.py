@@ -1,3 +1,5 @@
+"""Write command-line experiment settings to a JSON file."""
+
 import json
 import os
 

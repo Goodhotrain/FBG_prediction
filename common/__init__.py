@@ -1,1 +1,1 @@
-"""Shared experiment utilities."""
+"""Shared utilities for running NACFN experiments."""

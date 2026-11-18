@@ -1,4 +1,4 @@
-"""Leakage-safe tabular and longitudinal data pipeline."""
+"""Prepare static features and masked nutrition histories for FBG regression."""
 
 from __future__ import annotations
 from dataclasses import dataclass

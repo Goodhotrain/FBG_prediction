@@ -1,4 +1,4 @@
-"""Reusable training, evaluation, metrics, and checkpoint utilities."""
+"""Run training and evaluation epochs and record metrics and checkpoints."""
 
 from __future__ import annotations
 from dataclasses import asdict, dataclass

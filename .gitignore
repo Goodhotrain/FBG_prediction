@@ -1,8 +1,11 @@
+# Python caches and local environments
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
 .venv/
+
+# Local data and experiment outputs
 results/
 data/*.csv
 *.pt
