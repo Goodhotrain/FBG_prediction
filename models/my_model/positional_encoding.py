@@ -4,6 +4,8 @@ from torch import nn
 from einops import rearrange, repeat
 from math import pi
 from einops.layers.torch import Rearrange
+
+
 class NeRF_embedding(nn.Module):
     def __init__(self, n_layers: int = 5):
         super().__init__()
@@ -88,13 +90,13 @@ class PositionalEncoding2D(nn.Module):
         sin_inp_y = torch.einsum("bi,j->bij", pos_y, self.inv_freq)
         emb_x = get_emb(sin_inp_x).unsqueeze(2)
         emb_y = get_emb(sin_inp_y).unsqueeze(1)
-        emb = torch.zeros(
-            (batch_size, x, y, self.channels * 2), device=coords.device
-        ).type(coords.type())
+        emb = torch.zeros((batch_size, x, y, self.channels * 2), device=coords.device).type(coords.type())
         emb[:, :, :, : self.channels] = emb_x
         emb[:, :, :, self.channels : 2 * self.channels] = emb_y
 
         return emb
+
+
 class AxialRotaryEmbedding(nn.Module):
     def __init__(self, dim, freq_type="lucidrains", **kwargs):
         super().__init__()
@@ -103,9 +105,7 @@ class AxialRotaryEmbedding(nn.Module):
         if freq_type == "lucidrains":
             scales = torch.linspace(1.0, kwargs["max_freq"] / 2, self.dim // 4)
         elif freq_type == "vaswani":
-            scales = 1 / (
-                kwargs["base"] ** (torch.arange(0, self.dim, 4).float() / self.dim)
-            )
+            scales = 1 / (kwargs["base"] ** (torch.arange(0, self.dim, 4).float() / self.dim))
         else:
             NotImplementedError(
                 f"Only 'lucidrains' and 'vaswani' frequencies are implemented, but you chose {freq_type}."

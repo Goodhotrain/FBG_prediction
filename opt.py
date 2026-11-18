@@ -1,10 +1,15 @@
 """Command-line configuration for PSDCFN experiments."""
+
 from __future__ import annotations
 import argparse
 from pathlib import Path
 
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Train or evaluate PSDCFN for fasting blood glucose regression", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description="Train or evaluate PSDCFN for fasting blood glucose regression",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     data = parser.add_argument_group("data")
     data.add_argument("--label-path", default="data/ID-label-enhanced-92.csv")
     data.add_argument("--static-path", default="data/static.csv")
@@ -14,7 +19,9 @@ def build_parser() -> argparse.ArgumentParser:
     data.add_argument("--sequence-length", type=int, default=16)
     model = parser.add_argument_group("model")
     model.add_argument("--static-dim", type=int, default=32)
-    model.add_argument("--nutrition-dim", type=int, default=78, help="Nutrition columns excluding IDs and historical FBG")
+    model.add_argument(
+        "--nutrition-dim", type=int, default=78, help="Nutrition columns excluding IDs and historical FBG"
+    )
     model.add_argument("--hidden-dim", type=int, default=64)
     model.add_argument("--num-heads", type=int, default=4)
     model.add_argument("--num-layers", type=int, default=2)
@@ -40,6 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
     output.add_argument("--resume", action="store_true")
     output.add_argument("--test-only", action="store_true")
     return parser
+
 
 def parse_opts(argv: list[str] | None = None) -> argparse.Namespace:
     args = build_parser().parse_args(argv)

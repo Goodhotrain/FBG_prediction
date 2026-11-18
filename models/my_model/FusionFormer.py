@@ -1,5 +1,6 @@
 from typing import Dict, List, Tuple, Union
 import warnings
+
 warnings.filterwarnings("ignore")
 from einops.layers.torch import Rearrange
 import torch
@@ -11,31 +12,39 @@ from models.my_model.ConvLSTM import ConvLSTM
 from models.my_model.Attention import TimeseriesMultiHeadAttention
 from models.my_model.LSTM import LSTM
 from models.my_model.CVselection_network import Spectral_Selection_Unit
-from models.my_model.TSselection_network import AddNorm, GateAddNorm, GatedLinearUnit, Linear_Residual_Unit,  Weather_feather_Selection_Unit
+from models.my_model.TSselection_network import (
+    AddNorm,
+    GateAddNorm,
+    GatedLinearUnit,
+    Linear_Residual_Unit,
+    Weather_feather_Selection_Unit,
+)
 from models.my_model.GKConvLSTM import GKConvLSTM
+
+
 class FusionFormer(pl.LightningModule):
     def __init__(
-            self,
-            image_size: Union[List[int], Tuple[int]],
-            patch_size: Union[List[int], Tuple[int]],
-            frequencies: [12, 31, 24, 60],
-            bands_number: int = 11,
-            dim: int = 512,
-            batch_size: int = 16,
-            attention_head_size: int = 4,
-            satellite_masking_ratio: float = 0.9,
-            timeseries_masking_ratio: float =0.9,
-            output_size: int = 1,
-            encoder_input_satellite: Dict[str, int] = {},
-            satellite_flags: Dict[str, bool] = {},
-            encoder_input_timeseries: Dict[str, int] = {},
-            timeseries_flags: Dict[str, bool] = {},
-            input_length: int = 48,
-            output_length: int = 24,
-            lstm_layers: int = 3,
-            pe_type: str = "learned",
-            dropout: float = 0.1,
-            **kwargs,
+        self,
+        image_size: Union[List[int], Tuple[int]],
+        patch_size: Union[List[int], Tuple[int]],
+        frequencies: [12, 31, 24, 60],
+        bands_number: int = 11,
+        dim: int = 512,
+        batch_size: int = 16,
+        attention_head_size: int = 4,
+        satellite_masking_ratio: float = 0.9,
+        timeseries_masking_ratio: float = 0.9,
+        output_size: int = 1,
+        encoder_input_satellite: Dict[str, int] = {},
+        satellite_flags: Dict[str, bool] = {},
+        encoder_input_timeseries: Dict[str, int] = {},
+        timeseries_flags: Dict[str, bool] = {},
+        input_length: int = 48,
+        output_length: int = 24,
+        lstm_layers: int = 3,
+        pe_type: str = "learned",
+        dropout: float = 0.1,
+        **kwargs,
     ):
         super(FusionFormer, self).__init__()
         self.bands_number = bands_number
@@ -56,29 +65,47 @@ class FusionFormer(pl.LightningModule):
         self.pe_type = pe_type
         self.time_coords_encoder = AxialRotaryEmbedding(frequencies=self.frequencies)
         self.ts_mask_token = nn.Parameter(torch.zeros(1, 1, dim))
-        self.Spectral_Selection_Unit = Spectral_Selection_Unit(input_channels=encoder_input_satellite, input_embedding_flags=satellite_flags, hidden_size=self.hidden_size)
-
-        self.ctx_embedding = nn.Sequential(
-            Rearrange(
-                "b t c h w -> b t h w c"
-            ),
-            nn.Linear(9, 16)
+        self.Spectral_Selection_Unit = Spectral_Selection_Unit(
+            input_channels=encoder_input_satellite, input_embedding_flags=satellite_flags, hidden_size=self.hidden_size
         )
+
+        self.ctx_embedding = nn.Sequential(Rearrange("b t c h w -> b t h w c"), nn.Linear(9, 16))
         self.convlstm = ConvLSTM(input_channel=16, image_size=64, seq_len=self.output_length)
         self.GKConvLSTM = GKConvLSTM(input_channel=16, image_size=64, seq_len=self.output_length)
-        self.linear = nn.Linear(64*16*16, 64)
-        self.LRU_1 = Linear_Residual_Unit(input_size=64, hidden_size=self.dim, output_size=self.dim, dropout=self.dropout, residual=True)
-        self.LRU_2 = Linear_Residual_Unit(input_size=64, hidden_size=self.dim, output_size=self.dim,
-                                          dropout=self.dropout, residual=True)
+        self.linear = nn.Linear(64 * 16 * 16, 64)
+        self.LRU_1 = Linear_Residual_Unit(
+            input_size=64, hidden_size=self.dim, output_size=self.dim, dropout=self.dropout, residual=True
+        )
+        self.LRU_2 = Linear_Residual_Unit(
+            input_size=64, hidden_size=self.dim, output_size=self.dim, dropout=self.dropout, residual=True
+        )
         self.ts_embedding = nn.Linear(self.hidden_size, self.dim)
-        self.Weather_feather_Selection_Unit = Weather_feather_Selection_Unit(input_sizes=encoder_input_timeseries, input_embedding_flags=timeseries_flags, hidden_size=self.hidden_size)
-        self.initial_hidden_lstm = Linear_Residual_Unit(input_size=self.hidden_size, hidden_size=self.dim, output_size=self.dim, dropout=self.dropout,)
-        self.initial_cell_lstm = Linear_Residual_Unit(input_size=self.hidden_size, hidden_size=self.dim, output_size=self.dim, dropout=self.dropout,)
-        self.grn = Linear_Residual_Unit(input_size=self.dim, hidden_size=self.dim, output_size=self.dim, dropout=self.dropout)
-        self.lstm_encoder = LSTM(input_size=self.dim, hidden_size=self.dim, num_layers=self.lstm_layers, dropout=0.1, batch_first=True)
+        self.Weather_feather_Selection_Unit = Weather_feather_Selection_Unit(
+            input_sizes=encoder_input_timeseries, input_embedding_flags=timeseries_flags, hidden_size=self.hidden_size
+        )
+        self.initial_hidden_lstm = Linear_Residual_Unit(
+            input_size=self.hidden_size,
+            hidden_size=self.dim,
+            output_size=self.dim,
+            dropout=self.dropout,
+        )
+        self.initial_cell_lstm = Linear_Residual_Unit(
+            input_size=self.hidden_size,
+            hidden_size=self.dim,
+            output_size=self.dim,
+            dropout=self.dropout,
+        )
+        self.grn = Linear_Residual_Unit(
+            input_size=self.dim, hidden_size=self.dim, output_size=self.dim, dropout=self.dropout
+        )
+        self.lstm_encoder = LSTM(
+            input_size=self.dim, hidden_size=self.dim, num_layers=self.lstm_layers, dropout=0.1, batch_first=True
+        )
         self.post_lstm_gate_encoder = GatedLinearUnit(self.dim, dropout=self.dropout)
         self.post_lstm_add_norm_encoder = AddNorm(self.dim, trainable_add=False)
-        self.timeseries_attention = TimeseriesMultiHeadAttention(d_model=self.dim, n_head=self.attention_head_size, dropout=self.dropout)
+        self.timeseries_attention = TimeseriesMultiHeadAttention(
+            d_model=self.dim, n_head=self.attention_head_size, dropout=self.dropout
+        )
         self.timeseries_attn_gate_norm = GateAddNorm(self.dim, dropout=self.dropout, trainable_add=False)
         self.output_layer = nn.Linear(self.dim, self.output_size)
         self.Adaptive_output = nn.Sequential(
@@ -91,8 +118,17 @@ class FusionFormer(pl.LightningModule):
             nn.LayerNorm(self.dim),
             nn.Linear(self.dim, self.output_size),
         )
-    def forward(self,optical_flow: torch.Tensor, ctx: torch.Tensor, ctx_coords: torch.Tensor, ts: torch.Tensor, ts_coords: torch.Tensor, time_coords: torch.Tensor, mask: bool = True):
 
+    def forward(
+        self,
+        optical_flow: torch.Tensor,
+        ctx: torch.Tensor,
+        ctx_coords: torch.Tensor,
+        ts: torch.Tensor,
+        ts_coords: torch.Tensor,
+        time_coords: torch.Tensor,
+        mask: bool = True,
+    ):
         """
         Args:
             optical_flow (torch.Tensor): optical_flow  frame of shape [B, T, C×2, H, W]
@@ -112,8 +148,10 @@ class FusionFormer(pl.LightningModule):
         # ******************************satellite feature part****************************************
 
         ctx_dict = {str(c): ctx[:, :, c, :, :] for c in range(ctx.shape[2])}
-        ctx_output, bands_weights = self.Spectral_Selection_Unit(ctx_dict) #ctx_output.shape : B, T, H, W  satellite_weights : B, 1, H, W, bands_number
-        ctx_output = ctx_output.unsqueeze(2) #ctx_output.shape : B, T, 1, H, W
+        ctx_output, bands_weights = self.Spectral_Selection_Unit(
+            ctx_dict
+        )  # ctx_output.shape : B, T, H, W  satellite_weights : B, 1, H, W, bands_number
+        ctx_output = ctx_output.unsqueeze(2)  # ctx_output.shape : B, T, 1, H, W
         ctx_output = torch.cat([ctx_output, time_coords], axis=2)
         ctx_output = self.ctx_embedding(ctx_output)
         ctx_output = rearrange(ctx_output, "b t h w c -> b t c h w")
@@ -145,18 +183,20 @@ class FusionFormer(pl.LightningModule):
             mask=None,
         )
         # ******************************time series part****************************************
-        '''
+        """
         ts (torch.Tensor): Station timeseries of shape [B, T, C]
-        '''
+        """
         B, T, _ = ts.shape
-        encoder_lengths = torch.full((B,), T).to('cuda:0')
+        encoder_lengths = torch.full((B,), T).to("cuda:0")
         ts = {str(c): ts[:, :, c].unsqueeze(2) for c in range(ts.shape[2])}
-        static_embedding = torch.zeros((B, self.hidden_size), device='cuda:0')
+        static_embedding = torch.zeros((B, self.hidden_size), device="cuda:0")
         embeddings_varying_encoder, feature_weights = self.Weather_feather_Selection_Unit(ts)
         input_hidden = self.initial_hidden_lstm(static_embedding).expand(self.lstm_layers, -1, -1)
         input_cell = self.initial_cell_lstm(static_embedding).expand(self.lstm_layers, -1, -1)
         embeddings_varying_encoder = self.ts_embedding(embeddings_varying_encoder)
-        encoder_output, (hidden, cell) = self.lstm_encoder(embeddings_varying_encoder, (input_hidden, input_cell), lengths=encoder_lengths, enforce_sorted=False)
+        encoder_output, (hidden, cell) = self.lstm_encoder(
+            embeddings_varying_encoder, (input_hidden, input_cell), lengths=encoder_lengths, enforce_sorted=False
+        )
         lstm_output_encoder = self.post_lstm_gate_encoder(encoder_output)
         lstm_output_encoder = self.post_lstm_add_norm_encoder(lstm_output_encoder, embeddings_varying_encoder)
         attn_output, attn_output_weights = self.timeseries_attention(

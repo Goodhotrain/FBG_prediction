@@ -1,4 +1,5 @@
 """Leakage-safe tabular and longitudinal data pipeline."""
+
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
@@ -8,6 +9,7 @@ import torch
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, Dataset
 
+
 @dataclass
 class FBGPreprocessor:
     static_scaler: StandardScaler
@@ -16,17 +18,25 @@ class FBGPreprocessor:
     nutrition_columns: list[str]
 
     def state_dict(self) -> dict[str, Any]:
-        return {"static_columns": self.static_columns, "nutrition_columns": self.nutrition_columns,
-                "static_mean": self.static_scaler.mean_.tolist(), "static_scale": self.static_scaler.scale_.tolist(),
-                "nutrition_mean": self.nutrition_scaler.mean_.tolist(), "nutrition_scale": self.nutrition_scaler.scale_.tolist()}
+        return {
+            "static_columns": self.static_columns,
+            "nutrition_columns": self.nutrition_columns,
+            "static_mean": self.static_scaler.mean_.tolist(),
+            "static_scale": self.static_scaler.scale_.tolist(),
+            "nutrition_mean": self.nutrition_scaler.mean_.tolist(),
+            "nutrition_scale": self.nutrition_scaler.scale_.tolist(),
+        }
+
 
 def _validate(frame: pd.DataFrame, required: set[str], name: str) -> None:
     missing = required.difference(frame.columns)
     if missing:
         raise ValueError(f"{name} is missing required columns: {sorted(missing)}")
 
+
 class FBGDataset(Dataset):
     """One sample per label row, with nutrition records available up to that day."""
+
     def __init__(self, args: Any, subset: str | None, preprocessor: FBGPreprocessor | None = None):
         self.sequence_length = int(args.sequence_length)
         self.nutrition = pd.read_csv(args.nutrition_path)
@@ -52,11 +62,22 @@ class FBGDataset(Dataset):
         if preprocessor is None:
             train_rows = self.static.loc[self.indices, ["UserID", "Day"]]
             last_training_day = train_rows.groupby("UserID")["Day"].max().to_dict()
-            fit_rows = [i for i, (user, day) in enumerate(self.nutrition[["UserID", "Day"]].itertuples(index=False, name=None))
-                        if user in last_training_day and day <= last_training_day[user]]
+            fit_rows = [
+                i
+                for i, (user, day) in enumerate(self.nutrition[["UserID", "Day"]].itertuples(index=False, name=None))
+                if user in last_training_day and day <= last_training_day[user]
+            ]
             nutrition_fit = nutrition_log[fit_rows] if fit_rows else nutrition_log
-            preprocessor = FBGPreprocessor(StandardScaler().fit(raw_static.iloc[self.indices]), StandardScaler().fit(nutrition_fit), self.static_columns, self.nutrition_columns)
-        if preprocessor.static_columns != self.static_columns or preprocessor.nutrition_columns != self.nutrition_columns:
+            preprocessor = FBGPreprocessor(
+                StandardScaler().fit(raw_static.iloc[self.indices]),
+                StandardScaler().fit(nutrition_fit),
+                self.static_columns,
+                self.nutrition_columns,
+            )
+        if (
+            preprocessor.static_columns != self.static_columns
+            or preprocessor.nutrition_columns != self.nutrition_columns
+        ):
             raise ValueError("feature columns differ from the training preprocessor")
         self.preprocessor = preprocessor
         self.static_values = preprocessor.static_scaler.transform(raw_static).astype(np.float32)
@@ -70,8 +91,10 @@ class FBGDataset(Dataset):
     def __getitem__(self, item: int) -> tuple[torch.Tensor, ...]:
         row = int(self.indices[item])
         user_id, day = self.static.loc[row, ["UserID", "Day"]]
-        history = self.nutrition_values[(self.nutrition_values.UserID == user_id) & (self.nutrition_values.Day <= day)].sort_values("Day")
-        values = history[self.nutrition_columns].to_numpy(np.float32)[-self.sequence_length:]
+        history = self.nutrition_values[
+            (self.nutrition_values.UserID == user_id) & (self.nutrition_values.Day <= day)
+        ].sort_values("Day")
+        values = history[self.nutrition_columns].to_numpy(np.float32)[-self.sequence_length :]
         mask = np.ones(len(values), dtype=np.bool_)
         pad = self.sequence_length - len(values)
         if pad:
@@ -80,11 +103,22 @@ class FBGDataset(Dataset):
         if not mask.any():
             # Attention kernels cannot operate on a fully masked sequence.
             mask[-1] = True
-        return torch.tensor(row), torch.from_numpy(self.static_values[row]), torch.from_numpy(values), torch.from_numpy(mask), torch.tensor(self.targets[item])
+        return (
+            torch.tensor(row),
+            torch.from_numpy(self.static_values[row]),
+            torch.from_numpy(values),
+            torch.from_numpy(mask),
+            torch.tensor(self.targets[item]),
+        )
+
 
 def build_dataloaders(args: Any) -> tuple[DataLoader, DataLoader, FBGPreprocessor]:
     train = FBGDataset(args, args.train_split)
     valid = FBGDataset(args, args.valid_split, train.preprocessor)
     common = dict(batch_size=args.batch_size, num_workers=args.num_workers, pin_memory=True)
     generator = torch.Generator().manual_seed(args.seed)
-    return DataLoader(train, shuffle=True, generator=generator, **common), DataLoader(valid, shuffle=False, **common), train.preprocessor
+    return (
+        DataLoader(train, shuffle=True, generator=generator, **common),
+        DataLoader(valid, shuffle=False, **common),
+        train.preprocessor,
+    )

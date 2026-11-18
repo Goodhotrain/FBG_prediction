@@ -1,4 +1,3 @@
-
 import torch
 import torch.nn as nn
 import math
@@ -13,15 +12,13 @@ def get_gaussian_filter(kernel_size=3, sigma=1, channels=3, feature_map=None):
     y_grid = x_grid.t()
     xy_grid = torch.stack([x_grid, y_grid], dim=-1).float()
 
-    mean = (kernel_size - 1) / 2.
-    variance = sigma ** 2.
+    mean = (kernel_size - 1) / 2.0
+    variance = sigma**2.0
 
     # Calculate the 2-dimensional gaussian kernel
-    gaussian_kernel = (1. / (2. * math.pi * variance)) * \
-                      torch.exp(
-                          -torch.sum((xy_grid - mean) ** 2., dim=-1) / \
-                          (2. * variance)
-                      )
+    gaussian_kernel = (1.0 / (2.0 * math.pi * variance)) * torch.exp(
+        -torch.sum((xy_grid - mean) ** 2.0, dim=-1) / (2.0 * variance)
+    )
 
     # Make sure sum of values in gaussian kernel equals 1.
     gaussian_kernel = gaussian_kernel / torch.sum(gaussian_kernel)
@@ -33,13 +30,20 @@ def get_gaussian_filter(kernel_size=3, sigma=1, channels=3, feature_map=None):
     gaussian_kernel = gaussian_kernel.view(1, 1, kernel_size, kernel_size)
     gaussian_kernel = gaussian_kernel.repeat(channels, 1, 1, 1)
     padding = (kernel_size - 1) // 2
-    gaussian_filter = nn.Conv2d(in_channels=channels, out_channels=channels,
-                                kernel_size=kernel_size, groups=channels,
-                                bias=False, padding=padding)
+    gaussian_filter = nn.Conv2d(
+        in_channels=channels,
+        out_channels=channels,
+        kernel_size=kernel_size,
+        groups=channels,
+        bias=False,
+        padding=padding,
+    )
     gaussian_filter.weight.data = gaussian_kernel
     gaussian_filter.weight.requires_grad = False
 
     return gaussian_filter
+
+
 class FeatureMap:
     def __init__(self, model, target_layers):
         self.model = model
@@ -78,12 +82,15 @@ class ResNetFeatureExtractor:
         self.model = models.resnet50(pretrained=True)
         self.model.eval()
         self.feature_extractor = FeatureMap(self.model, target_layers)
-        self.preprocess = transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ])
+        self.preprocess = transforms.Compose(
+            [
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ]
+        )
+
     def extract_features(self, image):
         input_image = self.download_image(image)
         input_tensor = self.preprocess(input_image)

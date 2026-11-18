@@ -1,9 +1,9 @@
-
 from typing import Dict, List, Tuple, Union
 from abc import ABC, abstractmethod
 import torch
 import torch.nn as nn
 from torch.nn.utils import rnn
+
 HiddenState = Union[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]
 
 
@@ -65,6 +65,8 @@ class RNN(ABC, nn.RNNBase):
                     hidden_state = self.handle_no_encoding(hidden_state, no_encoding, initial_hidden_state)
                 out, _ = rnn.pad_packed_sequence(packed_out, batch_first=self.batch_first)
                 return out, hidden_state
+
+
 class LSTM(RNN, nn.LSTM):
     def handle_no_encoding(
         self, hidden_state: HiddenState, no_encoding: torch.BoolTensor, initial_hidden_state: HiddenState
@@ -73,6 +75,7 @@ class LSTM(RNN, nn.LSTM):
         hidden = hidden.masked_scatter(no_encoding, initial_hidden_state[0])
         cell = cell.masked_scatter(no_encoding, initial_hidden_state[0])
         return hidden, cell
+
     def init_hidden_state(self, x: torch.Tensor) -> HiddenState:
         num_directions = 2 if self.bidirectional else 1
         if self.batch_first:

@@ -1,7 +1,7 @@
-'''
+"""
 Copied and modified from 
 https://github.com/hustvl/Vim/blob/main/mamba-1p1p1/mamba_ssm/modules/mamba_simple.py
-'''
+"""
 
 # Copyright (c) 2023, Tri Dao, Albert Gu.
 
@@ -24,7 +24,12 @@ except ImportError:
 #     from mamba.selective_scan_interface import selective_scan_fn, mamba_inner_fn, bimamba_inner_fn, mamba_inner_fn_no_out_proj
 # except ImportError:
 #     selective_scan_fn, mamba_inner_fn, bimamba_inner_fn, mamba_inner_fn_no_out_proj = None, None, None, None#, None
-from models.mamba.selective_scan_interface import selective_scan_fn, mamba_inner_fn, bimamba_inner_fn, mamba_inner_fn_no_out_proj
+from models.mamba.selective_scan_interface import (
+    selective_scan_fn,
+    mamba_inner_fn,
+    bimamba_inner_fn,
+    mamba_inner_fn_no_out_proj,
+)
 
 try:
     from mamba_ssm.ops.triton.selective_state_update import selective_state_update
@@ -57,7 +62,7 @@ class Mamba(nn.Module):
         device=None,
         dtype=None,
         bimamba_type="none",
-        if_devide_out=True, # False
+        if_devide_out=True,  # False
         init_layer_scale=None,
     ):
         factory_kwargs = {"device": device, "dtype": dtype}
@@ -73,7 +78,7 @@ class Mamba(nn.Module):
         self.bimamba_type = bimamba_type
         self.if_devide_out = if_devide_out
 
-        assert bimamba_type == 'v2'
+        assert bimamba_type == "v2"
 
         self.init_layer_scale = init_layer_scale
         if init_layer_scale is not None:
@@ -94,9 +99,7 @@ class Mamba(nn.Module):
         self.activation = "silu"
         self.act = nn.SiLU()
 
-        self.x_proj = nn.Linear(
-            self.d_inner, self.dt_rank + self.d_state * 2, bias=False, **factory_kwargs
-        )
+        self.x_proj = nn.Linear(self.d_inner, self.dt_rank + self.d_state * 2, bias=False, **factory_kwargs)
         self.dt_proj = nn.Linear(self.dt_rank, self.d_inner, bias=True, **factory_kwargs)
 
         # Initialize special dt projection to preserve variance at initialization
@@ -110,8 +113,7 @@ class Mamba(nn.Module):
 
         # Initialize dt bias so that F.softplus(dt_bias) is between dt_min and dt_max
         dt = torch.exp(
-            torch.rand(self.d_inner, **factory_kwargs) * (math.log(dt_max) - math.log(dt_min))
-            + math.log(dt_min)
+            torch.rand(self.d_inner, **factory_kwargs) * (math.log(dt_max) - math.log(dt_min)) + math.log(dt_min)
         ).clamp(min=dt_init_floor)
         # Inverse of softplus: https://github.com/pytorch/pytorch/issues/72759
         inv_dt = dt + torch.log(-torch.expm1(-dt))
@@ -152,7 +154,7 @@ class Mamba(nn.Module):
             ).contiguous()
             A_b_log = torch.log(A_b)  # Keep A_b_log in fp32
             self.A_b_log = nn.Parameter(A_b_log)
-            self.A_b_log._no_weight_decay = True 
+            self.A_b_log._no_weight_decay = True
 
             self.conv1d_b = nn.Conv1d(
                 in_channels=self.d_inner,
@@ -164,9 +166,7 @@ class Mamba(nn.Module):
                 **factory_kwargs,
             )
 
-            self.x_proj_b = nn.Linear(
-                self.d_inner, self.dt_rank + self.d_state * 2, bias=False, **factory_kwargs
-            )
+            self.x_proj_b = nn.Linear(self.d_inner, self.dt_rank + self.d_state * 2, bias=False, **factory_kwargs)
             self.dt_proj_b = nn.Linear(self.dt_rank, self.d_inner, bias=True, **factory_kwargs)
 
             self.D_b = nn.Parameter(torch.ones(self.d_inner, device=device))  # Keep in fp32
@@ -222,7 +222,7 @@ class Mamba(nn.Module):
                     self.D.float(),
                     delta_bias=self.dt_proj.bias.float(),
                     delta_softplus=True,
-                )    
+                )
             elif self.bimamba_type == "v2":
                 A_b = -torch.exp(self.A_b_log.float())
 
@@ -252,11 +252,17 @@ class Mamba(nn.Module):
                     delta_bias=self.dt_proj_b.bias.float(),
                     delta_softplus=True,
                 )
-                
+
                 if not self.if_devide_out:
-                    out = F.linear(rearrange(out + out_b.flip([-1]), "b d l -> b l d"), self.out_proj.weight, self.out_proj.bias)
+                    out = F.linear(
+                        rearrange(out + out_b.flip([-1]), "b d l -> b l d"), self.out_proj.weight, self.out_proj.bias
+                    )
                 else:
-                    out = F.linear(rearrange(0.5*out + 0.5*out_b.flip([-1]), "b d l -> b l d"), self.out_proj.weight, self.out_proj.bias)
+                    out = F.linear(
+                        rearrange(0.5 * out + 0.5 * out_b.flip([-1]), "b d l -> b l d"),
+                        self.out_proj.weight,
+                        self.out_proj.bias,
+                    )
 
             else:
                 out = mamba_inner_fn(
@@ -320,7 +326,7 @@ class Mamba(nn.Module):
             y = rearrange(y, "b d l -> b l d")
             out = self.out_proj(y)
         if self.init_layer_scale is not None:
-                out = out * self.gamma    
+            out = out * self.gamma
         return out
 
     def step(self, hidden_states, conv_state, ssm_state):
@@ -373,14 +379,10 @@ class Mamba(nn.Module):
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None, **kwargs):
         device = self.out_proj.weight.device
         conv_dtype = self.conv1d.weight.dtype if dtype is None else dtype
-        conv_state = torch.zeros(
-            batch_size, self.d_model * self.expand, self.d_conv, device=device, dtype=conv_dtype
-        )
+        conv_state = torch.zeros(batch_size, self.d_model * self.expand, self.d_conv, device=device, dtype=conv_dtype)
         ssm_dtype = self.dt_proj.weight.dtype if dtype is None else dtype
         # ssm_dtype = torch.float32
-        ssm_state = torch.zeros(
-            batch_size, self.d_model * self.expand, self.d_state, device=device, dtype=ssm_dtype
-        )
+        ssm_state = torch.zeros(batch_size, self.d_model * self.expand, self.d_state, device=device, dtype=ssm_dtype)
         return conv_state, ssm_state
 
     def _get_states_from_cache(self, inference_params, batch_size, initialize_states=False):
@@ -413,9 +415,7 @@ class Mamba(nn.Module):
 
 
 class Block(nn.Module):
-    def __init__(
-        self, dim, mixer_cls, norm_cls=nn.LayerNorm, fused_add_norm=False, residual_in_fp32=False
-    ):
+    def __init__(self, dim, mixer_cls, norm_cls=nn.LayerNorm, fused_add_norm=False, residual_in_fp32=False):
         """
         Simple block wrapping a mixer class with LayerNorm/RMSNorm and residual connection"
 
@@ -439,9 +439,7 @@ class Block(nn.Module):
                 self.norm, (nn.LayerNorm, RMSNorm)
             ), "Only LayerNorm and RMSNorm are supported for fused_add_norm"
 
-    def forward(
-        self, hidden_states: Tensor, residual: Optional[Tensor] = None, inference_params=None
-    ):
+    def forward(self, hidden_states: Tensor, residual: Optional[Tensor] = None, inference_params=None):
         r"""Pass the input through the encoder layer.
 
         Args:

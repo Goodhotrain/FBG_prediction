@@ -15,6 +15,7 @@ Usage example
 >>> cross = FeatureFusionMultiHeadAttentionSimple(n_head=4, d_model=16)
 >>> out, w = cross(satellite=torch.randn(2, 12, 16), timeseries=torch.randn(2, 6, 16))
 """
+
 from __future__ import annotations
 from typing import Tuple
 import math
@@ -31,7 +32,9 @@ def rotate_every_two(x: torch.Tensor) -> torch.Tensor:
     return rearrange(x, "... d j -> ... (d j)")
 
 
-def build_rotary_sin_cos(T: int, D: int, device: torch.device, base: float = 10000.0) -> Tuple[torch.Tensor, torch.Tensor]:
+def build_rotary_sin_cos(
+    T: int, D: int, device: torch.device, base: float = 10000.0
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """Generate sin/cos of (1, T, D); D will be automatically truncated to even."""
     D = (D // 2) * 2  # ensure even
     pos = torch.arange(T, device=device, dtype=torch.float32).unsqueeze(1)  # (T,1)
@@ -68,7 +71,14 @@ class SatelliteMultiHeadAttentionSimple(nn.Module):
         rotary_frac: fraction of head dim to apply rotary on (0~1]; 1.0 = full Dh.
     """
 
-    def __init__(self, n_head: int = 4, d_model: int = 16, dropout: float = 0.0, use_rotary: bool = True, rotary_frac: float = 1.0) -> None:
+    def __init__(
+        self,
+        n_head: int = 4,
+        d_model: int = 16,
+        dropout: float = 0.0,
+        use_rotary: bool = True,
+        rotary_frac: float = 1.0,
+    ) -> None:
         super().__init__()
         assert d_model % n_head == 0, "d_model must be divisible by n_head"
         assert 0.0 < rotary_frac <= 1.0
@@ -133,7 +143,14 @@ class FeatureFusionMultiHeadAttention(nn.Module):
         outputs: (B, Tt, D), attn: (B, H, Tt, Ts)
     """
 
-    def __init__(self, n_head: int = 4, d_model: int = 32, dropout: float = 0.0, use_rotary: bool = True, rotary_frac: float = 1.0) -> None:
+    def __init__(
+        self,
+        n_head: int = 4,
+        d_model: int = 32,
+        dropout: float = 0.0,
+        use_rotary: bool = True,
+        rotary_frac: float = 1.0,
+    ) -> None:
         super().__init__()
         assert d_model % n_head == 0
         assert 0.0 < rotary_frac <= 1.0
@@ -196,7 +213,6 @@ class FeatureFusionMultiHeadAttention(nn.Module):
         return out.mean(dim=1)
 
 
-
 def _device():
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -207,17 +223,23 @@ def test_feature_fusion_cross_attention_simple():
     dev = _device()
 
     sat = torch.randn(B, Ts, D, device=dev, requires_grad=True)
-    ts  = torch.randn(B, Tt, D, device=dev, requires_grad=True)
+    ts = torch.randn(B, Tt, D, device=dev, requires_grad=True)
 
     # rotary full
-    cross_full = FeatureFusionMultiHeadAttention(n_head=H, d_model=D, dropout=0.1, use_rotary=True, rotary_frac=1.0).to(dev)
+    cross_full = FeatureFusionMultiHeadAttention(n_head=H, d_model=D, dropout=0.1, use_rotary=True, rotary_frac=1.0).to(
+        dev
+    )
     out1, w1 = cross_full(satellite=sat, timeseries=ts)
     assert out1.shape == (B, Tt, D)
     assert w1.shape == (B, H, Tt, Ts)
 
     # rotary half dims
-    cross_half = FeatureFusionMultiHeadAttention(n_head=H, d_model=D, dropout=0.1, use_rotary=True, rotary_frac=0.5).to(dev)
-    out2, w2 = cross_half(satellite=sat.detach().clone().requires_grad_(True), timeseries=ts.detach().clone().requires_grad_(True))
+    cross_half = FeatureFusionMultiHeadAttention(n_head=H, d_model=D, dropout=0.1, use_rotary=True, rotary_frac=0.5).to(
+        dev
+    )
+    out2, w2 = cross_half(
+        satellite=sat.detach().clone().requires_grad_(True), timeseries=ts.detach().clone().requires_grad_(True)
+    )
     assert out2.shape == (B, Tt, D)
     assert w2.shape == (B, H, Tt, Ts)
 

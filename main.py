@@ -1,4 +1,5 @@
 """Training entry point: python main.py --help."""
+
 from __future__ import annotations
 
 import json
@@ -42,14 +43,20 @@ def train(args) -> Path:
             for split, values in (("train", train_metrics), ("valid", valid_metrics)):
                 for name, value in vars(values).items():
                     writer.add_scalar(f"{split}/{name}", value, epoch)
-            print(f"epoch={epoch + 1:03d} train_loss={train_metrics.loss:.4f} valid_mae={valid_metrics.mae:.4f} valid_rmse={valid_metrics.rmse:.4f} r2={valid_metrics.r2:.4f}")
+            print(
+                f"epoch={epoch + 1:03d} train_loss={train_metrics.loss:.4f} valid_mae={valid_metrics.mae:.4f} valid_rmse={valid_metrics.rmse:.4f} r2={valid_metrics.r2:.4f}"
+            )
             improved = valid_metrics.mae < best_mae
             if improved:
                 best_mae, stale = valid_metrics.mae, 0
-                save_checkpoint(run_dir / "checkpoints/best.pt", model, optimizer, scheduler, epoch, best_mae, args, preprocessor)
+                save_checkpoint(
+                    run_dir / "checkpoints/best.pt", model, optimizer, scheduler, epoch, best_mae, args, preprocessor
+                )
             else:
                 stale += 1
-            save_checkpoint(run_dir / "checkpoints/last.pt", model, optimizer, scheduler, epoch, best_mae, args, preprocessor)
+            save_checkpoint(
+                run_dir / "checkpoints/last.pt", model, optimizer, scheduler, epoch, best_mae, args, preprocessor
+            )
             if scheduler:
                 if args.scheduler == "plateau":
                     scheduler.step(valid_metrics.mae)

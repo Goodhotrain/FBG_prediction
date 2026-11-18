@@ -3,11 +3,14 @@ from typing import Dict, List, Tuple, Union
 import torch
 import torch.nn as nn
 
+
 def get_embedding_size(n: int, max_size: int = 100) -> int:
     if n > 2:
         return min(round(1.6 * n**0.56), max_size)
     else:
         return 1
+
+
 class TimeDistributedEmbeddingBag(nn.EmbeddingBag):
     def __init__(self, *args, batch_first: bool = False, **kwargs):
         super().__init__(*args, **kwargs)

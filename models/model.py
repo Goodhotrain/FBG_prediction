@@ -1,12 +1,15 @@
 """Personalized Static-Dynamic Counterfactual Fusion Network (PSDCFN)."""
+
 from __future__ import annotations
 from dataclasses import dataclass
 import torch
 from torch import Tensor, nn
 import torch.nn.functional as F
 
+
 class StaticFeatureTokenizer(nn.Module):
     """Represent every scalar clinical feature as an independently learnable token."""
+
     def __init__(self, num_features: int, hidden_dim: int, dropout: float):
         super().__init__()
         self.weight = nn.Parameter(torch.empty(num_features, hidden_dim))
@@ -25,6 +28,7 @@ class StaticFeatureTokenizer(nn.Module):
         tokens = torch.where(missing.unsqueeze(-1), self.missing, tokens)
         return self.dropout(self.norm(tokens))
 
+
 class GatedResidualNetwork(nn.Module):
     def __init__(self, dim: int, dropout: float):
         super().__init__()
@@ -35,11 +39,14 @@ class GatedResidualNetwork(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         return self.norm(x + self.gate(x) * self.content(x))
 
+
 class StaticEncoder(nn.Module):
     def __init__(self, num_features: int, dim: int, heads: int, layers: int, dropout: float):
         super().__init__()
         self.tokenizer = StaticFeatureTokenizer(num_features, dim, dropout)
-        block = nn.TransformerEncoderLayer(dim, heads, dim * 4, dropout, activation="gelu", batch_first=True, norm_first=True)
+        block = nn.TransformerEncoderLayer(
+            dim, heads, dim * 4, dropout, activation="gelu", batch_first=True, norm_first=True
+        )
         self.encoder = nn.TransformerEncoder(block, layers, norm=nn.LayerNorm(dim))
         self.query = nn.Parameter(torch.randn(dim) * 0.02)
 
@@ -48,26 +55,32 @@ class StaticEncoder(nn.Module):
         importance = torch.softmax(torch.einsum("bfd,d->bf", tokens, self.query) / self.query.numel() ** 0.5, dim=1)
         return torch.einsum("bf,bfd->bd", importance, tokens), importance
 
+
 class TemporalNutritionEncoder(nn.Module):
     def __init__(self, input_dim: int, dim: int, heads: int, layers: int, max_length: int, dropout: float):
         super().__init__()
         self.input = nn.Sequential(nn.LayerNorm(input_dim), nn.Linear(input_dim, dim), nn.GELU())
         self.position = nn.Parameter(torch.randn(1, max_length, dim) * 0.02)
-        block = nn.TransformerEncoderLayer(dim, heads, dim * 4, dropout, activation="gelu", batch_first=True, norm_first=True)
+        block = nn.TransformerEncoderLayer(
+            dim, heads, dim * 4, dropout, activation="gelu", batch_first=True, norm_first=True
+        )
         self.encoder = nn.TransformerEncoder(block, layers, norm=nn.LayerNorm(dim))
         self.max_length = max_length
 
     def forward(self, x: Tensor, valid_mask: Tensor) -> Tensor:
         if x.size(1) > self.max_length:
             raise ValueError(f"sequence length {x.size(1)} exceeds configured maximum {self.max_length}")
-        h = self.input(x) + self.position[:, :x.size(1)]
+        h = self.input(x) + self.position[:, : x.size(1)]
         # True means ignored for PyTorch's padding mask.
         return self.encoder(h, src_key_padding_mask=~valid_mask.bool())
+
 
 class ProgressiveCrossFusion(nn.Module):
     def __init__(self, dim: int, heads: int, layers: int, dropout: float):
         super().__init__()
-        self.cross_attention = nn.ModuleList([nn.MultiheadAttention(dim, heads, dropout, batch_first=True) for _ in range(layers)])
+        self.cross_attention = nn.ModuleList(
+            [nn.MultiheadAttention(dim, heads, dropout, batch_first=True) for _ in range(layers)]
+        )
         self.residual = nn.ModuleList([GatedResidualNetwork(dim, dropout) for _ in range(layers)])
         self.norm = nn.LayerNorm(dim)
 
@@ -79,6 +92,7 @@ class ProgressiveCrossFusion(nn.Module):
             query = residual(query + update)
         return self.norm(query.squeeze(1)), attention.squeeze(1)
 
+
 @dataclass
 class ModelOutput:
     prediction: Tensor
@@ -89,34 +103,64 @@ class ModelOutput:
     temporal_attention: Tensor
     history_gate: Tensor
 
+
 class FBGPredictor(nn.Module):
     """Dual-stream regression model with interpretable fusion and CF consistency."""
-    def __init__(self, static_dim: int = 32, nutrition_dim: int = 78, hidden_dim: int = 64,
-                 num_heads: int = 4, num_layers: int = 2, sequence_length: int = 16,
-                 dropout: float = 0.15, cf_lambda: float = 0.05, perturb_scale: float = 0.05):
+
+    def __init__(
+        self,
+        static_dim: int = 32,
+        nutrition_dim: int = 78,
+        hidden_dim: int = 64,
+        num_heads: int = 4,
+        num_layers: int = 2,
+        sequence_length: int = 16,
+        dropout: float = 0.15,
+        cf_lambda: float = 0.05,
+        perturb_scale: float = 0.05,
+    ):
         super().__init__()
         if hidden_dim % num_heads:
             raise ValueError("hidden_dim must be divisible by num_heads")
         self.static_dim, self.nutrition_dim = static_dim, nutrition_dim
         self.cf_lambda, self.perturb_scale = cf_lambda, perturb_scale
         self.static_encoder = StaticEncoder(static_dim, hidden_dim, num_heads, num_layers, dropout)
-        self.dynamic_encoder = TemporalNutritionEncoder(nutrition_dim, hidden_dim, num_heads, num_layers, sequence_length, dropout)
+        self.dynamic_encoder = TemporalNutritionEncoder(
+            nutrition_dim, hidden_dim, num_heads, num_layers, sequence_length, dropout
+        )
         self.fusion = ProgressiveCrossFusion(hidden_dim, num_heads, num_layers, dropout)
-        self.history_encoder = nn.Sequential(nn.Linear(1, hidden_dim // 2), nn.GELU(), nn.Linear(hidden_dim // 2, hidden_dim))
-        self.history_gate = nn.Sequential(nn.Linear(hidden_dim * 2, hidden_dim), nn.GELU(), nn.Linear(hidden_dim, 1), nn.Sigmoid())
-        self.head = nn.Sequential(nn.Linear(hidden_dim * 2, hidden_dim), nn.GELU(), nn.Dropout(dropout), nn.Linear(hidden_dim, 1))
+        self.history_encoder = nn.Sequential(
+            nn.Linear(1, hidden_dim // 2), nn.GELU(), nn.Linear(hidden_dim // 2, hidden_dim)
+        )
+        self.history_gate = nn.Sequential(
+            nn.Linear(hidden_dim * 2, hidden_dim), nn.GELU(), nn.Linear(hidden_dim, 1), nn.Sigmoid()
+        )
+        self.head = nn.Sequential(
+            nn.Linear(hidden_dim * 2, hidden_dim), nn.GELU(), nn.Dropout(dropout), nn.Linear(hidden_dim, 1)
+        )
 
     @classmethod
     def from_args(cls, args) -> "FBGPredictor":
-        return cls(args.static_dim, args.nutrition_dim, args.hidden_dim, args.num_heads,
-                   args.num_layers, args.sequence_length, args.dropout, args.cf_lambda, args.perturb_scale)
+        return cls(
+            args.static_dim,
+            args.nutrition_dim,
+            args.hidden_dim,
+            args.num_heads,
+            args.num_layers,
+            args.sequence_length,
+            args.dropout,
+            args.cf_lambda,
+            args.perturb_scale,
+        )
 
     def _predict(self, static: Tensor, nutrition: Tensor, mask: Tensor) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         if static.size(-1) != self.static_dim:
             raise ValueError(f"expected {self.static_dim} static features, got {static.size(-1)}")
         expected = self.nutrition_dim + 1
         if nutrition.size(-1) != expected:
-            raise ValueError(f"expected {expected} longitudinal features (last is historical FBG), got {nutrition.size(-1)}")
+            raise ValueError(
+                f"expected {expected} longitudinal features (last is historical FBG), got {nutrition.size(-1)}"
+            )
         nutrients, historical_fbg = nutrition[..., :-1], nutrition[..., -1:]
         static_summary, static_attention = self.static_encoder(static)
         timeline = self.dynamic_encoder(nutrients, mask)
@@ -130,8 +174,15 @@ class FBGPredictor(nn.Module):
         prediction = self.head(torch.cat([static_summary, personalized], dim=-1)).squeeze(-1)
         return prediction, static_attention, temporal_attention, gate.squeeze(-1)
 
-    def forward(self, sample_id: Tensor, static: Tensor, nutrition: Tensor, mask: Tensor | None = None,
-                label: Tensor | None = None, return_details: bool = False):
+    def forward(
+        self,
+        sample_id: Tensor,
+        static: Tensor,
+        nutrition: Tensor,
+        mask: Tensor | None = None,
+        label: Tensor | None = None,
+        return_details: bool = False,
+    ):
         # Backward compatibility: old calls used (id, static, nutrition, label).
         if label is None and mask is not None and mask.dtype != torch.bool:
             label, mask = mask, None

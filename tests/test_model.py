@@ -1,6 +1,7 @@
 import torch
 from models.model import FBGPredictor
 
+
 def test_forward_backward_and_explanations():
     model = FBGPredictor(static_dim=5, nutrition_dim=6, hidden_dim=16, num_heads=4, num_layers=1, sequence_length=4)
     sample_id = torch.arange(3)
@@ -16,7 +17,16 @@ def test_forward_backward_and_explanations():
     output.loss.backward()
     assert any(p.grad is not None for p in model.parameters())
 
+
 def test_inference_without_target():
-    model = FBGPredictor(static_dim=4, nutrition_dim=3, hidden_dim=8, num_heads=2, num_layers=1, sequence_length=2).eval()
-    result = model(torch.arange(2), torch.randn(2, 4), torch.randn(2, 2, 4), torch.ones(2, 2, dtype=torch.bool), return_details=True)
+    model = FBGPredictor(
+        static_dim=4, nutrition_dim=3, hidden_dim=8, num_heads=2, num_layers=1, sequence_length=2
+    ).eval()
+    result = model(
+        torch.arange(2),
+        torch.randn(2, 4),
+        torch.randn(2, 2, 4),
+        torch.ones(2, 2, dtype=torch.bool),
+        return_details=True,
+    )
     assert result.loss is None

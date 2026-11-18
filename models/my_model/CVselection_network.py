@@ -6,6 +6,8 @@ import torch.nn as nn
 from torch.nn.utils import rnn
 import torch.nn.functional as F
 from models.my_model.embedding import MultiEmbedding
+
+
 class TimeDistributed(nn.Module):
     def __init__(self, module: nn.Module, batch_first: bool = True):
         super().__init__()
@@ -21,6 +23,7 @@ class TimeDistributed(nn.Module):
         y = y.view(b, t, y.size(1), y.size(2))
         return y
 
+
 class TimeDistributedInterpolation(nn.Module):
     def __init__(self, output_size: int, batch_first: bool = False, trainable: bool = False):
         super().__init__()
@@ -30,11 +33,13 @@ class TimeDistributedInterpolation(nn.Module):
         if self.trainable:
             self.mask = nn.Parameter(torch.zeros(output_size, dtype=torch.float32))
             self.gate = nn.Sigmoid()
+
     def interpolate(self, x):
         upsampled = F.interpolate(x.unsqueeze(1), self.output_size, mode="linear", align_corners=True).squeeze(1)
         if self.trainable:
             upsampled = upsampled * self.gate(self.mask.unsqueeze(0)) * 2.0
         return upsampled
+
     def forward(self, x):
         # x shape (batch, time, channels, height, width)
         if len(x.size()) <= 2:
@@ -46,6 +51,7 @@ class TimeDistributedInterpolation(nn.Module):
         y = y.contiguous().view(b, y.size(-1), h, w)
 
         return y
+
 
 class AddNorm(nn.Module):
     def __init__(self, input_channels: int, skip_size: int, trainable_add: bool = True):
@@ -67,8 +73,6 @@ class AddNorm(nn.Module):
         return output
 
 
-
-
 class GatedConv2d(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, kernel_size: int, dropout: float = None):
         super().__init__()
@@ -78,12 +82,14 @@ class GatedConv2d(nn.Module):
             self.dropout = None
         self.conv = nn.Conv2d(in_channels, out_channels * 2, kernel_size, padding=kernel_size // 2)
         self.init_weights()
+
     def init_weights(self):
         for n, p in self.named_parameters():
-            if 'bias' in n:
+            if "bias" in n:
                 nn.init.zeros_(p)
             else:
-                nn.init.kaiming_uniform_(p, nonlinearity='sigmoid')
+                nn.init.kaiming_uniform_(p, nonlinearity="sigmoid")
+
     def forward(self, x):
         if self.dropout:
             x = self.dropout(x)
@@ -91,8 +97,11 @@ class GatedConv2d(nn.Module):
         x, gate = x.chunk(2, dim=1)
         return x * torch.sigmoid(gate)
 
+
 class ResampleNorm(nn.Module):
-    def __init__(self, input_channels: int, output_channels: int = None, batch_first: bool = True, trainable_add: bool = True):
+    def __init__(
+        self, input_channels: int, output_channels: int = None, batch_first: bool = True, trainable_add: bool = True
+    ):
         super().__init__()
 
         self.input_channels = input_channels
@@ -117,6 +126,7 @@ class ResampleNorm(nn.Module):
 
         x = self.norm(x)
         return x
+
 
 class GatedConvUnit(nn.Module):
     def __init__(self, input_channels: int, hidden_size: int, kernel_size: int, dropout: float = None):
@@ -191,31 +201,36 @@ class ConvGatedResidualNetwork(nn.Module):
             residual_size = self.output_channels
         if self.output_channels != residual_size:
             self.resample_norm = ResampleNorm(residual_size, self.output_channels)
-        self.conv1 = nn.Conv2d(self.input_channels, self.hidden_channels, kernel_size=kernel_size, padding=kernel_size // 2)
+        self.conv1 = nn.Conv2d(
+            self.input_channels, self.hidden_channels, kernel_size=kernel_size, padding=kernel_size // 2
+        )
 
         self.elu = nn.ELU()
-        self.conv2 = nn.Conv2d(self.hidden_channels, self.hidden_channels*2, kernel_size=kernel_size, padding=kernel_size // 2)
+        self.conv2 = nn.Conv2d(
+            self.hidden_channels, self.hidden_channels * 2, kernel_size=kernel_size, padding=kernel_size // 2
+        )
         self.init_weights()
         self.gate_norm = GateAddNorm(
-            input_channels=self.hidden_channels*2,
+            input_channels=self.hidden_channels * 2,
             skip_size=self.output_channels,
             hidden_size=self.output_channels,
             dropout=self.dropout,
             trainable_add=False,
         )
+
     def init_weights(self):
         for name, p in self.named_parameters():
             if "bias" in name:
                 torch.nn.init.zeros_(p)
             elif "conv1" in name or "conv2" in name:
                 torch.nn.init.kaiming_normal_(p, a=0, mode="fan_in", nonlinearity="leaky_relu")
+
     def forward(self, x, residual=None):
         if residual is None:
             residual = x
         if self.input_channels != self.output_channels and not self.residual:
             print()
             residual = self.resample_norm(residual)
-
 
         x = self.conv1(x)
         x = self.elu(x)
@@ -241,7 +256,6 @@ class Spectral_Selection_Unit(nn.Module):
         self.input_channels = input_channels
         self.input_embedding_flags = input_embedding_flags
         self.dropout = dropout
-
 
         if self.num_inputs > 1:
 
@@ -279,6 +293,7 @@ class Spectral_Selection_Unit(nn.Module):
     @property
     def input_size_total(self):
         return sum(size if name in self.input_embedding_flags else size for name, size in self.input_channels.items())
+
     @property
     def num_inputs(self):
         return len(self.input_channels)
@@ -312,8 +327,3 @@ class Spectral_Selection_Unit(nn.Module):
             else:  # ndim == 2 -> batch size, hidden size, n_variables
                 sparse_weights = torch.ones(outputs.size(0), 1, 1, device=outputs.device)
         return outputs, sparse_weights
-
-
-
-
-

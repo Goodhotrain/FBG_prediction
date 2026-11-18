@@ -1,4 +1,5 @@
 """Evaluate a trained PSDCFN checkpoint and export predictions."""
+
 from __future__ import annotations
 
 import csv
@@ -34,7 +35,9 @@ def evaluate(args):
                 mask.to(device),
                 return_details=True,
             )
-            for sid, truth, prediction, gate in zip(sample_id, target, details.prediction.cpu(), details.history_gate.cpu()):
+            for sid, truth, prediction, gate in zip(
+                sample_id, target, details.prediction.cpu(), details.history_gate.cpu()
+            ):
                 rows.append((sid.item(), truth.item(), prediction.item(), gate.item()))
     with output_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)

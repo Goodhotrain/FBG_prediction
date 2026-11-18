@@ -1,6 +1,7 @@
 import json
 import os
 
+
 def record_config(args):
     save_path = os.path.join(args.result_path, "config.json")
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
