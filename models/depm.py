@@ -1,4 +1,5 @@
-"""DepMamba implementation.
+"""DepMamba baseline for multimodal sequence encoding.
+
 Authors
 -------
 * Jiaxin Ye 2024

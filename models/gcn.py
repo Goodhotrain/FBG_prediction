@@ -1,3 +1,5 @@
+"""Graph convolutions and temporal forecasting blocks for legacy experiments."""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

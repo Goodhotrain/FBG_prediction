@@ -1,3 +1,5 @@
+"""Convolutional LSTM cells and sequence encoder."""
+
 import torch.nn as nn
 from collections import OrderedDict
 import torch

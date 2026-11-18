@@ -1,4 +1,5 @@
-"""
+"""Helpers for assembling Mamba and BiMamba blocks.
+
 Copied and modified from
 https://github.com/state-spaces/mamba/blob/main/mamba_ssm/models/mixer_seq_simple.py
 """

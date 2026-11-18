@@ -1,3 +1,5 @@
+"""Gaussian-kernel convolutional LSTM cells and encoder."""
+
 import torch
 import torch.nn as nn
 from collections import OrderedDict

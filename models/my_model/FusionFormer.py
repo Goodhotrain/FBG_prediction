@@ -1,3 +1,5 @@
+"""Experimental model for fusing spatial and time-series features."""
+
 from typing import Dict, List, Tuple, Union
 import warnings
 

@@ -1,3 +1,5 @@
+"""Legacy feature recalibration and fusion predictor."""
+
 import torch
 import math
 from torch import nn

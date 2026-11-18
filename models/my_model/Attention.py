@@ -1,18 +1,18 @@
-"""
-Attention blocks with a simplified forward API.
+"""Attention blocks for spatial and time-series feature fusion.
+
 - forward only needs satellite / timeseries, no longer passes pos_embedding or mask.
 - Rotary positional encoding is dynamically generated internally by sequence length (can be disabled).
 
 Classes
 -------
 - SatelliteMultiHeadAttentionSimple: self-attention (satellite -> satellite)
-- FeatureFusionMultiHeadAttentionSimple: cross-attention (timeseries -> satellite)
+- FeatureFusionMultiHeadAttention: cross-attention (timeseries -> satellite)
 
 Usage example
 --------
 >>> attn = SatelliteMultiHeadAttentionSimple(n_head=4, d_model=16, use_rotary=True)
 >>> y, w = attn(torch.randn(2, 10, 16))
->>> cross = FeatureFusionMultiHeadAttentionSimple(n_head=4, d_model=16)
+>>> cross = FeatureFusionMultiHeadAttention(n_head=4, d_model=16)
 >>> out, w = cross(satellite=torch.randn(2, 12, 16), timeseries=torch.randn(2, 6, 16))
 """
 

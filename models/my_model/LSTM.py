@@ -1,3 +1,5 @@
+"""LSTM wrapper for variable-length sequence batches."""
+
 from typing import Dict, List, Tuple, Union
 from abc import ABC, abstractmethod
 import torch

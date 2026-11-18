@@ -1,3 +1,5 @@
+"""Gating, feature selection, and attention for time-series inputs."""
+
 import math
 from typing import Dict, List, Tuple, Union
 

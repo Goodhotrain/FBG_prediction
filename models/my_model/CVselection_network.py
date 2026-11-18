@@ -1,3 +1,5 @@
+"""Gated feature selection blocks for spatial inputs."""
+
 import math
 from typing import Dict, List, Tuple, Union
 from abc import ABC, abstractmethod

@@ -1,5 +1,6 @@
-"""
-Copied and modified from 
+"""Multimodal bidirectional Mamba sequence mixer.
+
+Copied and modified from
 https://github.com/hustvl/Vim/blob/main/mamba-1p1p1/mamba_ssm/modules/mamba_simple.py
 """
 

@@ -1,3 +1,5 @@
+"""Embedding layers for individual and grouped categorical features."""
+
 from typing import Dict, List, Tuple, Union
 
 import torch

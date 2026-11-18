@@ -1,3 +1,5 @@
+"""Earlier FBG predictor with progressive feature fusion."""
+
 import torch.nn as nn
 import torch
 import math

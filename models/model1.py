@@ -1,3 +1,5 @@
+"""Earlier FBG predictor with graph and attention based fusion."""
+
 import torch.nn as nn
 import torch
 import math

@@ -1,4 +1,5 @@
-"""
+"""CUDA and reference interfaces for selective scan.
+
 Copied from
 https://github.com/hustvl/Vim/blob/main/mamba-1p1p1/mamba_ssm/ops/selective_scan_interface.py
 """

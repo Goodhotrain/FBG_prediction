@@ -1,3 +1,5 @@
+"""Legacy multimodal graph and feature fusion components."""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
