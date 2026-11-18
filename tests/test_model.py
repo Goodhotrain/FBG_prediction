@@ -1,9 +1,11 @@
+"""Check NACFN training and inference with synthetic inputs."""
+
 import torch
-from models.model import FBGPredictor
+from models.model import NACFN
 
 
 def test_forward_backward_and_explanations():
-    model = FBGPredictor(static_dim=5, nutrition_dim=6, hidden_dim=16, num_heads=4, num_layers=1, sequence_length=4)
+    model = NACFN(static_dim=5, nutrition_dim=6, hidden_dim=16, num_heads=4, num_layers=1, sequence_length=4)
     sample_id = torch.arange(3)
     static = torch.randn(3, 5)
     nutrition = torch.randn(3, 4, 7)
@@ -19,9 +21,7 @@ def test_forward_backward_and_explanations():
 
 
 def test_inference_without_target():
-    model = FBGPredictor(
-        static_dim=4, nutrition_dim=3, hidden_dim=8, num_heads=2, num_layers=1, sequence_length=2
-    ).eval()
+    model = NACFN(static_dim=4, nutrition_dim=3, hidden_dim=8, num_heads=2, num_layers=1, sequence_length=2).eval()
     result = model(
         torch.arange(2),
         torch.randn(2, 4),

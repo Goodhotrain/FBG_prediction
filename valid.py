@@ -1,4 +1,4 @@
-"""Evaluate a trained PSDCFN checkpoint and export predictions."""
+"""Evaluate a NACFN checkpoint and export sample-level predictions."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import torch
 
 from common.engine import load_checkpoint, resolve_device, run_epoch, seed_everything
 from data.dataset import build_dataloaders
-from models.model import FBGPredictor
+from models.model import NACFN
 from opt import parse_opts
 
 
@@ -19,7 +19,7 @@ def evaluate(args):
     seed_everything(args.seed)
     device = resolve_device(args.device)
     _, loader, _ = build_dataloaders(args)
-    model = FBGPredictor.from_args(args).to(device)
+    model = NACFN.from_args(args).to(device)
     load_checkpoint(args.checkpoint, model, device)
     metrics = run_epoch(model, loader, device)
     print(f"MAE={metrics.mae:.4f} RMSE={metrics.rmse:.4f} MSE={metrics.mse:.4f} R2={metrics.r2:.4f}")

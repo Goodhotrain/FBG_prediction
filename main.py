@@ -1,4 +1,4 @@
-"""Training entry point: python main.py --help."""
+"""Train NACFN and record metrics and checkpoints."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 from common.engine import append_history, load_checkpoint, resolve_device, run_epoch, save_checkpoint, seed_everything
 from common.optimizer import get_optimizer, get_scheduler
 from data.dataset import build_dataloaders
-from models.model import FBGPredictor
+from models.model import NACFN
 from opt import parse_opts
 
 
@@ -23,7 +23,7 @@ def train(args) -> Path:
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "config.json").write_text(json.dumps(vars(args), indent=2), encoding="utf-8")
     train_loader, valid_loader, preprocessor = build_dataloaders(args)
-    model = FBGPredictor.from_args(args).to(device)
+    model = NACFN.from_args(args).to(device)
     optimizer = get_optimizer(args, model)
     scheduler = get_scheduler(args, optimizer)
     start_epoch, best_mae, stale = 0, float("inf"), 0

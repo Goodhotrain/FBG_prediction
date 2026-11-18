@@ -1,4 +1,4 @@
-"""Command-line configuration for PSDCFN experiments."""
+"""Define and parse the shared NACFN command-line options."""
 
 from __future__ import annotations
 import argparse
@@ -7,7 +7,7 @@ from pathlib import Path
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Train or evaluate PSDCFN for fasting blood glucose regression",
+        description="Train or evaluate NACFN for fasting blood glucose regression",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     data = parser.add_argument_group("data")

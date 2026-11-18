@@ -1,4 +1,4 @@
-"""Personalized Static-Dynamic Counterfactual Fusion Network (PSDCFN)."""
+"""NACFN model for fasting blood glucose regression."""
 
 from __future__ import annotations
 from dataclasses import dataclass
@@ -104,7 +104,7 @@ class ModelOutput:
     history_gate: Tensor
 
 
-class FBGPredictor(nn.Module):
+class NACFN(nn.Module):
     """Dual-stream regression model with interpretable fusion and CF consistency."""
 
     def __init__(
@@ -140,7 +140,7 @@ class FBGPredictor(nn.Module):
         )
 
     @classmethod
-    def from_args(cls, args) -> "FBGPredictor":
+    def from_args(cls, args) -> "NACFN":
         return cls(
             args.static_dim,
             args.nutrition_dim,
@@ -200,3 +200,7 @@ class FBGPredictor(nn.Module):
         if return_details:
             return details
         return prediction, loss, mse, cf_loss
+
+
+# Keep the original import path available for existing callers.
+FBGPredictor = NACFN

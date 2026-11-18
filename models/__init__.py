@@ -1,5 +1,5 @@
-"""PSDCFN and baseline model implementations."""
+"""Public model entry point for NACFN."""
 
-from .model import FBGPredictor
+from .model import FBGPredictor, NACFN
 
-__all__ = ["FBGPredictor"]
+__all__ = ["NACFN", "FBGPredictor"]

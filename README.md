@@ -1,15 +1,15 @@
-# PSDCFN
+# NACFN
 
-PSDCFN is a PyTorch implementation for predicting fasting blood glucose (FBG) from static clinical features, nutrition records, and historical FBG. The model encodes static and temporal features separately, combines them through cross-attention, and uses a learned gate to incorporate historical FBG. Training also uses a counterfactual consistency loss.
+NACFN predicts fasting blood glucose (FBG) from static clinical features, nutrition records, and historical FBG. The PyTorch model combines static and temporal representations through cross-attention and uses a learned gate to incorporate historical FBG. Training uses a counterfactual consistency loss alongside the regression loss.
 
 ## Code overview
 
 | Path | Purpose |
 | --- | --- |
-| [`main.py`](main.py) | Trains PSDCFN and saves metrics and checkpoints. |
+| [`main.py`](main.py) | Trains NACFN and saves metrics and checkpoints. |
 | [`valid.py`](valid.py) | Evaluates a checkpoint and exports predictions to CSV. |
 | [`opt.py`](opt.py) | Defines the shared command-line options. |
-| [`models/model.py`](models/model.py) | Implements `FBGPredictor`, the model used by both entry points. Other modules in `models/` contain earlier models and experimental components. |
+| [`models/model.py`](models/model.py) | Implements `NACFN`, the model used by both entry points. Other modules in `models/` contain earlier models and experimental components. |
 | [`data/dataset.py`](data/dataset.py) | Reads the CSV inputs, preprocesses features, and builds masked nutrition history windows. |
 | [`common/`](common/) | Contains the training loop, regression metrics, optimizer and scheduler setup, and checkpoint utilities. |
 | [`tests/`](tests/) | Checks the data pipeline and model with synthetic inputs. |
