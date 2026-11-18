@@ -100,9 +100,6 @@ class FBGDataset(Dataset):
         if pad:
             values = np.pad(values, ((pad, 0), (0, 0)))
             mask = np.pad(mask, (pad, 0))
-        if not mask.any():
-            # Attention kernels cannot operate on a fully masked sequence.
-            mask[-1] = True
         return (
             torch.tensor(row),
             torch.from_numpy(self.static_values[row]),

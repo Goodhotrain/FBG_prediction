@@ -1,6 +1,6 @@
 # NACFN
 
-NACFN predicts fasting blood glucose (FBG) from static clinical features, nutrition records, and historical FBG. The PyTorch model combines static and temporal representations through cross-attention and uses a learned gate to incorporate historical FBG. Training uses a counterfactual consistency loss alongside the regression loss.
+NACFN predicts fasting blood glucose (FBG) from static clinical features, nutrition records, and historical FBG. The model pools the static feature tokens with sparsemax. For each day, it applies self-attention across nutrient tokens and averages them into a daily representation. The static representation then attends to the valid daily representations, and a learned gate incorporates historical FBG. Training uses a counterfactual consistency loss alongside the regression loss.
 
 ## Code overview
 
@@ -25,3 +25,5 @@ python valid.py --checkpoint results/example/checkpoints/best.pt \
 ```
 
 Supply your own CSVs. The label file starts with the numeric FBG target and the split (`train` or `test` by default). The static file follows the same row order as the labels. Both the static and nutrition files require `UserID` and `Day` columns. The last nutrition feature is historical FBG. Run `python main.py --help` for options, including feature dimensions. Use the same model settings for training and evaluation.
+
+Checkpoints from the earlier cross-day encoder are incompatible with the intra-day encoder. Train a new checkpoint before evaluation.

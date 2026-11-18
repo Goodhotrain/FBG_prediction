@@ -7,8 +7,20 @@ from torch import Tensor, nn
 import torch.nn.functional as F
 
 
-class StaticFeatureTokenizer(nn.Module):
-    """Represent every scalar clinical feature as an independently learnable token."""
+def sparsemax(scores: Tensor) -> Tensor:
+    """Project scores onto the probability simplex along the last axis."""
+    logits = scores.float() if scores.dtype in (torch.float16, torch.bfloat16) else scores
+    logits = logits - logits.amax(dim=-1, keepdim=True)
+    ranked = logits.sort(dim=-1, descending=True).values
+    cumulative = ranked.cumsum(dim=-1) - 1
+    ranks = torch.arange(1, scores.size(-1) + 1, device=scores.device, dtype=logits.dtype)
+    support = (ranks * ranked > cumulative).sum(dim=-1, keepdim=True)
+    threshold = cumulative.gather(-1, support - 1) / support
+    return (logits - threshold).clamp_min(0).to(scores.dtype)
+
+
+class ScalarFeatureTokenizer(nn.Module):
+    """Represent each scalar feature with its own learnable token."""
 
     def __init__(self, num_features: int, hidden_dim: int, dropout: float):
         super().__init__()
@@ -43,7 +55,7 @@ class GatedResidualNetwork(nn.Module):
 class StaticEncoder(nn.Module):
     def __init__(self, num_features: int, dim: int, heads: int, layers: int, dropout: float):
         super().__init__()
-        self.tokenizer = StaticFeatureTokenizer(num_features, dim, dropout)
+        self.tokenizer = ScalarFeatureTokenizer(num_features, dim, dropout)
         block = nn.TransformerEncoderLayer(
             dim, heads, dim * 4, dropout, activation="gelu", batch_first=True, norm_first=True
         )
@@ -52,14 +64,17 @@ class StaticEncoder(nn.Module):
 
     def forward(self, x: Tensor) -> tuple[Tensor, Tensor]:
         tokens = self.encoder(self.tokenizer(x))
-        importance = torch.softmax(torch.einsum("bfd,d->bf", tokens, self.query) / self.query.numel() ** 0.5, dim=1)
+        scores = torch.einsum("bfd,d->bf", tokens, self.query) / self.query.numel() ** 0.5
+        importance = sparsemax(scores)
         return torch.einsum("bf,bfd->bd", importance, tokens), importance
 
 
-class TemporalNutritionEncoder(nn.Module):
+class IntraDayNutritionEncoder(nn.Module):
+    """Contextualize nutrient tokens separately for each day and pool them."""
+
     def __init__(self, input_dim: int, dim: int, heads: int, layers: int, max_length: int, dropout: float):
         super().__init__()
-        self.input = nn.Sequential(nn.LayerNorm(input_dim), nn.Linear(input_dim, dim), nn.GELU())
+        self.tokenizer = ScalarFeatureTokenizer(input_dim, dim, dropout)
         self.position = nn.Parameter(torch.randn(1, max_length, dim) * 0.02)
         block = nn.TransformerEncoderLayer(
             dim, heads, dim * 4, dropout, activation="gelu", batch_first=True, norm_first=True
@@ -68,11 +83,14 @@ class TemporalNutritionEncoder(nn.Module):
         self.max_length = max_length
 
     def forward(self, x: Tensor, valid_mask: Tensor) -> Tensor:
-        if x.size(1) > self.max_length:
-            raise ValueError(f"sequence length {x.size(1)} exceeds configured maximum {self.max_length}")
-        h = self.input(x) + self.position[:, : x.size(1)]
-        # True means ignored for PyTorch's padding mask.
-        return self.encoder(h, src_key_padding_mask=~valid_mask.bool())
+        batch, days, nutrients = x.shape
+        if not 1 <= days <= self.max_length:
+            raise ValueError(f"expected sequence length between 1 and {self.max_length}, got {days}")
+        values = x.masked_fill(~valid_mask.unsqueeze(-1), 0).reshape(batch * days, nutrients)
+        # Each day is a separate attention batch item. The sequence axis contains only nutrients.
+        tokens = self.encoder(self.tokenizer(values))
+        daily = tokens.mean(dim=1).reshape(batch, days, -1) + self.position[:, :days]
+        return daily.masked_fill(~valid_mask.unsqueeze(-1), 0)
 
 
 class ProgressiveCrossFusion(nn.Module):
@@ -86,11 +104,16 @@ class ProgressiveCrossFusion(nn.Module):
 
     def forward(self, static: Tensor, dynamic: Tensor, valid_mask: Tensor) -> tuple[Tensor, Tensor]:
         query = static.unsqueeze(1)
+        has_history = valid_mask.any(dim=1, keepdim=True)
+        padding = ~valid_mask
+        # Allow a zero placeholder for empty histories to keep attention finite.
+        padding[:, -1:] &= has_history
         attention = None
         for cross, residual in zip(self.cross_attention, self.residual):
-            update, attention = cross(query, dynamic, dynamic, key_padding_mask=~valid_mask.bool(), need_weights=True)
+            update, attention = cross(query, dynamic, dynamic, key_padding_mask=padding, need_weights=True)
+            update = update.masked_fill(~has_history.unsqueeze(-1), 0)
             query = residual(query + update)
-        return self.norm(query.squeeze(1)), attention.squeeze(1)
+        return self.norm(query.squeeze(1)), attention.squeeze(1).masked_fill(~valid_mask, 0)
 
 
 @dataclass
@@ -125,7 +148,7 @@ class NACFN(nn.Module):
         self.static_dim, self.nutrition_dim = static_dim, nutrition_dim
         self.cf_lambda, self.perturb_scale = cf_lambda, perturb_scale
         self.static_encoder = StaticEncoder(static_dim, hidden_dim, num_heads, num_layers, dropout)
-        self.dynamic_encoder = TemporalNutritionEncoder(
+        self.dynamic_encoder = IntraDayNutritionEncoder(
             nutrition_dim, hidden_dim, num_heads, num_layers, sequence_length, dropout
         )
         self.fusion = ProgressiveCrossFusion(hidden_dim, num_heads, num_layers, dropout)
@@ -165,11 +188,13 @@ class NACFN(nn.Module):
         static_summary, static_attention = self.static_encoder(static)
         timeline = self.dynamic_encoder(nutrients, mask)
         fused, temporal_attention = self.fusion(static_summary, timeline, mask)
-        counts = mask.long().sum(1).clamp_min(1)
-        last_index = counts - 1 + (mask.size(1) - counts)  # sequences are left padded
-        last_fbg = historical_fbg[torch.arange(len(mask), device=mask.device), last_index]
+        days = torch.arange(mask.size(1), device=mask.device)
+        last_index = days.masked_fill(~mask, -1).amax(dim=1, keepdim=True)
+        last_fbg = historical_fbg.gather(1, last_index.clamp_min(0).unsqueeze(-1)).squeeze(1)
+        last_fbg = last_fbg.masked_fill(last_index < 0, 0)
         history = self.history_encoder(last_fbg)
         gate = self.history_gate(torch.cat([fused, history], dim=-1))
+        gate = gate.masked_fill(last_index < 0, 0)
         personalized = gate * history + (1.0 - gate) * fused
         prediction = self.head(torch.cat([static_summary, personalized], dim=-1)).squeeze(-1)
         return prediction, static_attention, temporal_attention, gate.squeeze(-1)
