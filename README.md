@@ -1,6 +1,5 @@
 # PSDCFN: Personalized Static–Dynamic Counterfactual Fusion Network
 
-[![Project Page](https://img.shields.io/badge/Project-Page-blue)](https://goodhotrain.github.io/FBG_prediction)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-ee4c2c)](https://pytorch.org/)
 
